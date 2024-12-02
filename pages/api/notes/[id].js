@@ -48,12 +48,6 @@ const sendPushNotification = async (userId, title, message) => {
             notification: {
                 title,
                 body: message,
-                android: {
-                    notification: {
-                        icon: "ic_stat_book",
-                        color: "#31b5a8",
-                    }
-                }
             },
             tokens: deviceTokens,
         };
