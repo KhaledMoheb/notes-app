@@ -44,33 +44,54 @@ export default async function handler(req, res) {
       const queryParams = req.query;
       let filters = {};
 
-      // Build dynamic filters based on query parameters
+      // Ensure userId is provided
+      if (!queryParams.userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      // Add userId filter
+      filters.userId = queryParams.userId;
+
+      // Add timestamp filter if provided
+      if (queryParams.timestamp) {
+        const delta = new Date(queryParams.timestamp);
+        if (isNaN(delta.getTime())) {
+          return res.status(400).json({ error: "Invalid timestamp" });
+        }
+        filters.timestamp = { $gt: delta }; // Only notes with a timestamp greater than delta
+      }
+
+      // Add additional filters (optional)
       if (queryParams.title) filters.title = { $regex: queryParams.title, $options: "i" }; // Case-insensitive regex
       if (queryParams.description) filters.description = { $regex: queryParams.description, $options: "i" };
-      if (queryParams.userId) filters.userId = queryParams.userId;
       if (queryParams.tagId) filters.tagId = queryParams.tagId;
       if (queryParams.deleted) filters.deleted = queryParams.deleted === "true"; // Convert string to boolean
       if (queryParams.pinned) filters.pinned = queryParams.pinned === "true";
 
       console.log("Query filters:", filters);
 
-      // Query MongoDB with filters and use lean() to return plain JavaScript objects
-      const notes = await Note.find(filters).lean();
+      try {
+        // Query MongoDB with filters and use lean() to return plain JavaScript objects
+        const notes = await Note.find(filters).lean();
 
-      // Map the notes to rename _id to id
-      const notesWithId = notes.map(note => ({
-        id: note._id.toString(), // Convert ObjectId to string
-        title: note.title,
-        description: note.description,
-        userId: note.userId,
-        tagId: note.tagId,
-        deleted: note.deleted,
-        pinned: note.pinned,
-        timestamp: note.timestamp,
-      }));
+        // Map the notes to rename _id to id
+        const notesWithId = notes.map(note => ({
+          id: note._id.toString(), // Convert ObjectId to string
+          title: note.title,
+          description: note.description,
+          userId: note.userId,
+          tagId: note.tagId,
+          deleted: note.deleted,
+          pinned: note.pinned,
+          timestamp: note.timestamp,
+        }));
 
-      console.log("Fetched notes:", notesWithId.length);
-      return res.status(200).json(notesWithId);
+        console.log("Fetched notes:", notesWithId.length);
+        return res.status(200).json(notesWithId);
+      } catch (error) {
+        console.error("Error fetching notes:", error);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     } else if (req.method === "POST") {
       // Add a new note to the database
       const newNote = req.body;
@@ -119,12 +140,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Note ID is required" });
       }
 
-      const deleted = await Note.findByIdAndDelete(id);
-
-      if (!deleted) {
-        console.log("Error: Note not found for deletion");
-        return res.status(404).json({ error: "Note not found" });
-      }
+      const updatedNote = await Note.findByIdAndUpdate(
+        id,
+        {
+          title: "",
+          description: "",
+          tagId: null,
+          userId: null,
+          pinned: false,
+          deleted: true,
+          updatedAt: new Date(), // Keep a timestamp for when the deletion occurred
+        },
+        { new: true } // Return the updated document
+      );
 
       console.log("Note deleted successfully");
       return res.status(200).json({ message: "Note deleted successfully!" });

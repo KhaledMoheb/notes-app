@@ -165,7 +165,7 @@ export default function Home() {
       <List>
         {notes.length > 0 ? (
           notes.map((note) => (
-            <ListItem key={note._id} secondaryAction={
+            <ListItem key={note.id} secondaryAction={
               <>
                 <IconButton 
                   edge="end" 

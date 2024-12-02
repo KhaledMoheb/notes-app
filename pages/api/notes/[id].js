@@ -89,8 +89,19 @@ export default async function handler(req, res) {
                 return res.status(404).json({ error: "Note not found" });
             }
 
-            // Hard delete: completely remove the note from the database
-            await Note.findByIdAndDelete(id);
+            const updatedNote = await Note.findByIdAndUpdate(
+                id,
+                {
+                    title: "",
+                    description: "",
+                    tagId: null,
+                    userId: null,
+                    pinned: false,
+                    deleted: true,
+                    updatedAt: new Date(), // Keep a timestamp for when the deletion occurred
+                },
+                { new: true } // Return the updated document
+            );
 
             return res.status(200).json({ message: "Note deleted successfully" });
         }
