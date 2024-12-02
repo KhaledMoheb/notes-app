@@ -1,9 +1,19 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
 const notesFilePath = path.join(process.cwd(), "notes.json");
 
+// Ensure the 'notes.json' file exists before performing any operation
+const ensureNotesFileExists = () => {
+  if (!fs.existsSync(notesFilePath)) {
+    fs.writeFileSync(notesFilePath, JSON.stringify([])); // Create an empty array if the file does not exist
+  }
+};
+
 export default function handler(req, res) {
+  ensureNotesFileExists(); // Ensure notes.json file exists
+
+  // Handle GET request to fetch filtered notes
   if (req.method === "GET") {
     try {
       const data = fs.readFileSync(notesFilePath, "utf-8");
@@ -23,11 +33,20 @@ export default function handler(req, res) {
 
       res.status(200).json(filteredNotes);
     } catch (error) {
+      console.error("Error reading notes:", error);
       res.status(500).json({ error: "Unable to read notes" });
     }
-  } else if (req.method === "POST") {
+  }
+  
+  // Handle POST request to add a new note
+  else if (req.method === "POST") {
     try {
       const newNote = req.body;
+
+      // Check if the new note has an 'id' field; otherwise, generate one
+      if (!newNote.id) {
+        newNote.id = Date.now().toString(); // Generate a unique ID based on the current timestamp
+      }
 
       const data = fs.readFileSync(notesFilePath, "utf-8");
       const notes = JSON.parse(data);
@@ -35,13 +54,17 @@ export default function handler(req, res) {
       // Add the new note to the notes array
       notes.push(newNote);
 
-      // Write updated notes to the file
+      // Write the updated notes array back to the file
       fs.writeFileSync(notesFilePath, JSON.stringify(notes, null, 2), "utf-8");
       res.status(201).json({ message: "Note added successfully!" });
     } catch (error) {
+      console.error("Error adding note:", error);
       res.status(500).json({ error: "Unable to add note" });
     }
-  } else if (req.method === "PUT") {
+  }
+
+  // Handle PUT request to update an existing note
+  else if (req.method === "PUT") {
     try {
       const { id } = req.query;
       const updatedNote = req.body;
@@ -63,9 +86,13 @@ export default function handler(req, res) {
       fs.writeFileSync(notesFilePath, JSON.stringify(notes, null, 2), "utf-8");
       res.status(200).json({ message: "Note updated successfully!" });
     } catch (error) {
+      console.error("Error updating note:", error);
       res.status(500).json({ error: "Unable to update note" });
     }
-  } else if (req.method === "DELETE") {
+  }
+
+  // Handle DELETE request to remove a note
+  else if (req.method === "DELETE") {
     try {
       const { id } = req.query;
 
@@ -86,9 +113,13 @@ export default function handler(req, res) {
       fs.writeFileSync(notesFilePath, JSON.stringify(notes, null, 2), "utf-8");
       res.status(200).json({ message: "Note deleted successfully!" });
     } catch (error) {
+      console.error("Error deleting note:", error);
       res.status(500).json({ error: "Unable to delete note" });
     }
-  } else {
+  }
+
+  // Handle any other unsupported request methods
+  else {
     res.status(405).json({ error: "Method not allowed" });
   }
 }
