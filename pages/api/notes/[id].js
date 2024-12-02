@@ -48,6 +48,11 @@ const sendPushNotification = async (userId, title, message) => {
             notification: {
                 title,
                 body: message,
+                android: {
+                    notification: {
+                        icon: "ic_launcher_round"
+                    }
+                }
             },
             tokens: deviceTokens,
         };
