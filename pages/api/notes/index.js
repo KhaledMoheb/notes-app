@@ -1,38 +1,46 @@
-import e from "@dbschema/default.esdl";
-import client from "../../../lib/edgedb";
+import mongoose from "mongoose";
+
+const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
+
+// MongoDB connection setup
+const connectMongoDB = async () => {
+  if (mongoose.connection.readyState === 1) return; // Already connected
+  await mongoose.connect(process.env.MONGO_URI, clientOptions); // Make sure to set your MongoDB URI in .env
+};
+
+// Define Note model
+const noteSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  userId: { type: String, required: true },
+  tagId: { type: Number, required: true },
+  deleted: { type: Boolean, default: false },
+  pinned: { type: Boolean, default: false },
+  timestamp: { type: Date, default: Date.now },
+});
+
+const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 
 export default async function handler(req, res) {
   try {
+    await connectMongoDB(); // Ensure MongoDB is connected
+
     if (req.method === "GET") {
       const queryParams = req.query;
+      let filters = {};
 
       // Build dynamic filters based on query parameters
-      const filters = Object.entries(queryParams)
-        .filter(([key, value]) => value && ["title", "description", "userId", "tagId", "deleted", "pinned"].includes(key)) // Only valid fields from the schema
-        .map(([key, value]) => `note.${key} ILIKE '%${value}%'`);
+      if (queryParams.title) filters.title = { $regex: queryParams.title, $options: "i" }; // Case-insensitive regex
+      if (queryParams.description) filters.description = { $regex: queryParams.description, $options: "i" };
+      if (queryParams.userId) filters.userId = queryParams.userId;
+      if (queryParams.tagId) filters.tagId = queryParams.tagId;
+      if (queryParams.deleted) filters.deleted = queryParams.deleted === "true"; // Convert string to boolean
+      if (queryParams.pinned) filters.pinned = queryParams.pinned === "true";
 
-      // Construct the EdgeQL query with filters
-      let edgeqlQuery = `
-        SELECT Note {
-          id,
-          userId,
-          title,
-          description,
-          tagId,
-          deleted,
-          pinned,
-          timestamp
-        }
-      `;
+      // Query MongoDB with filters
+      const notes = await Note.find(filters);
 
-      // Add filters if provided
-      if (filters.length > 0) {
-        edgeqlQuery += ` FILTER ${filters.join(" AND ")}`;
-      }
-
-      // Run the query
-      const result = await client.query(edgeqlQuery);
-      return res.status(200).json(result);
+      return res.status(200).json(notes);
     } else if (req.method === "POST") {
       // Add a new note to the database
       const newNote = req.body;
@@ -41,15 +49,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const result = await e.insert(e.Note, {
+      const note = new Note({
         title: newNote.title,
         description: newNote.description,
         userId: newNote.userId,
         tagId: newNote.tagId,
         deleted: newNote.deleted || false,
         pinned: newNote.pinned || false,
-        timestamp: new Date(),
-      }).run(client);
+      });
+
+      const result = await note.save();
 
       return res.status(201).json({ message: "Note added successfully!", note: result });
     } else if (req.method === "PUT") {
@@ -61,23 +70,27 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Note ID is required" });
       }
 
-      const existingNote = await e.select(e.Note, { filter_single: { id }, id: true }).run(client);
+      const existingNote = await Note.findById(id);
 
       if (!existingNote) {
         return res.status(404).json({ error: "Note not found" });
       }
 
-      const updated = await e.update(e.Note, {
-        filter: { id },
-        set: {
-          title: updatedNote.title ?? undefined,
-          description: updatedNote.description ?? undefined,
-          userId: updatedNote.userId ?? undefined,
-          tagId: updatedNote.tagId ?? undefined,
-          deleted: updatedNote.deleted ?? undefined,
-          pinned: updatedNote.pinned ?? undefined,
+      // Update fields based on what was passed
+      const updated = await Note.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            title: updatedNote.title ?? existingNote.title,
+            description: updatedNote.description ?? existingNote.description,
+            userId: updatedNote.userId ?? existingNote.userId,
+            tagId: updatedNote.tagId ?? existingNote.tagId,
+            deleted: updatedNote.deleted ?? existingNote.deleted,
+            pinned: updatedNote.pinned ?? existingNote.pinned,
+          },
         },
-      }).run(client);
+        { new: true } // Return the updated document
+      );
 
       return res.status(200).json({ message: "Note updated successfully!", note: updated });
     } else if (req.method === "DELETE") {
@@ -88,7 +101,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Note ID is required" });
       }
 
-      const deleted = await e.delete(e.Note, { filter: { id } }).run(client);
+      const deleted = await Note.findByIdAndDelete(id);
 
       if (!deleted) {
         return res.status(404).json({ error: "Note not found" });
