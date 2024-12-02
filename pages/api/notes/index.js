@@ -45,12 +45,12 @@ export default async function handler(req, res) {
       let filters = {};
 
       // Ensure userId is provided
-      if (!queryParams.userId) {
-        return res.status(400).json({ error: "userId is required" });
+      if (queryParams.userId) {
+       // return res.status(400).json({ error: "userId is required" });
+        // Add userId filter
+        filters.userId = queryParams.userId;
       }
 
-      // Add userId filter
-      filters.userId = queryParams.userId;
 
       // Add timestamp filter if provided
       if (queryParams.timestamp) {
