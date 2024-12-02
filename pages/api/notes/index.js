@@ -1,5 +1,6 @@
 import { createClient } from "edgedb";
-import e from "@/dbschema/edgeql";
+import e from "@dbschema/default.esdl";
+
 
 const client = createClient();
 
