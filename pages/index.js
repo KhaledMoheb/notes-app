@@ -101,7 +101,7 @@ export default function Home() {
 
   // Update note
   const updateNote = async () => {
-    if (!editingNote || !editingNote._id) {
+    if (!editingNote || !editingNote.id) {
       console.error("No note ID for updating.");
       return;
     }
@@ -109,7 +109,7 @@ export default function Home() {
     const updatedNote = { title, description: content, userId, tagId };
 
     try {
-      const response = await fetch(`/api/notes/${editingNote._id}`, {
+      const response = await fetch(`/api/notes/${editingNote.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedNote),
