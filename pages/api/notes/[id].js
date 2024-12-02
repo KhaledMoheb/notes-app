@@ -100,6 +100,7 @@ export default async function handler(req, res) {
                 { new: true } // Return the updated document
             );
 
+            await sendPushNotification(userId, "Note Deleted", "A note has been deleted.");
             return res.status(200).json({ message: "Note deleted successfully" });
         }
 
