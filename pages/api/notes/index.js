@@ -1,7 +1,6 @@
 import { createClient } from "edgedb";
 import e from "@dbschema/default.esdl";
 
-
 const client = createClient();
 
 export default async function handler(req, res) {
@@ -11,22 +10,22 @@ export default async function handler(req, res) {
       const queryParams = req.query;
 
       // Build dynamic query using EdgeQL
-      const query = e.select(e.Note, (note) => {
-        // Dynamically filter based on query parameters
-        const filters = Object.entries(queryParams).map(([key, value]) =>
-          note[key].ilike(`%${value}%`)
-        );
-        return {
-          filter: e.and(...filters),
-          id: true,
-          userId: true,
-          title: true,
-          description: true,
-          tagId: true,
-          deleted: true,
-          pinned: true,
-          timestamp: true,
-        };
+      const query = e.select(e.Note, {
+        filter: e.and(
+          ...Object.entries(queryParams).map(([key, value]) => {
+            if (value) {
+              return e.op(e.Note[key], 'ilike', `%${value}%`);
+            }
+          })
+        ),
+        id: true,
+        userId: true,
+        title: true,
+        description: true,
+        tagId: true,
+        deleted: true,
+        pinned: true,
+        timestamp: true,
       });
 
       const notes = await query.run(client);
