@@ -13,8 +13,8 @@ export default function Home() {
   const [content, setContent] = useState("");
   const [editingNote, setEditingNote] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const userId = "12345"; // Example userId
-  const tagId = 1;        // Example tagId
+  const [userId, setUserId] = useState("");
+  const [tagId, setTagId] = useState("");
 
   // Fetch notes on component mount
   useEffect(() => {
@@ -53,8 +53,10 @@ export default function Home() {
       });
 
       if (response.ok) {
+        setUserId("");
         setTitle("");
         setContent("");
+        setTagId("");
         fetchNotes();
       } else {
         console.error("Failed to add note");
@@ -81,14 +83,17 @@ export default function Home() {
   // Open edit dialog
   const openEditDialog = (note) => {
     setEditingNote(note);
+    setUserId(note.userId);
     setTitle(note.title);
     setContent(note.description);
+    setTagId(note.tagId);
     setOpenDialog(true);
   };
 
   // Close dialog
   const closeDialog = () => {
     setEditingNote(null);
+    setUserId("");
     setTitle("");
     setContent("");
     setOpenDialog(false);

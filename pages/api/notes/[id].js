@@ -34,8 +34,10 @@ const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 
 const sendPushNotification = async (userId, title, message) => {
     try {
+        console.log("sendPushNotification", userId);
         const devicesSnapshot = await firestore.collection(`users/${userId}/devices`).get();
         const deviceTokens = devicesSnapshot.docs.map((doc) => doc.data().deviceId);
+        console.log("devicesSnapshot", devicesSnapshot);
 
         if (deviceTokens.length === 0) {
             console.log("No device tokens found for user.");
@@ -50,7 +52,7 @@ const sendPushNotification = async (userId, title, message) => {
             tokens: deviceTokens,
         };
 
-        await messaging.sendMulticast(messagePayload);
+        await messaging.sendEachForMulticast(messagePayload);
         console.log("Push notification sent!");
     } catch (error) {
         console.error("Error sending push notification:", error);
