@@ -1,72 +1,92 @@
 import { useState, useEffect } from "react";
-import { Button, TextField, Container, Typography, List, ListItem, ListItemText, IconButton, Box } from "@mui/material";
+import { 
+  Button, TextField, Container, Typography, List, ListItem, 
+  ListItemText, IconButton, Box, Dialog, DialogActions, 
+  DialogContent, DialogTitle 
+} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 
 export default function Home() {
-  const [notes, setNotes] = useState([]); // Initialize as an empty array
+  const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNote, setEditingNote] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const userId = "12345"; // Example userId
+  const tagId = 1;        // Example tagId
 
-  // Fetch all notes on initial load
+  // Fetch notes on component mount
   useEffect(() => {
     fetchNotes();
   }, []);
 
-  // Fetch notes from the API
+  // Fetch notes
   const fetchNotes = async () => {
     try {
       const response = await fetch("/api/notes");
       const data = await response.json();
-      
       if (Array.isArray(data)) {
-        setNotes(data); // Ensure it's an array before setting the state
+        setNotes(data);
       } else {
-        console.error("Fetched data is not an array:", data); // Handle non-array response
+        console.error("Invalid data format:", data);
       }
     } catch (error) {
-      console.error("Error fetching notes:", error); // Catch any errors during fetch
+      console.error("Error fetching notes:", error);
     }
   };
 
-  // Add a new note
+  // Add new note
   const addNote = async () => {
-    const newNote = { title, content };
-    const response = await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newNote),
-    });
+    if (!title.trim() || !content.trim()) {
+      console.error("Title or content cannot be empty.");
+      return;
+    }
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log(data.message);
-      setTitle("");
-      setContent("");
-      fetchNotes();
+    const newNote = { title, description: content, userId, tagId };
+
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newNote),
+      });
+
+      if (response.ok) {
+        setTitle("");
+        setContent("");
+        fetchNotes();
+      } else {
+        console.error("Failed to add note");
+      }
+    } catch (error) {
+      console.error("Error adding note:", error);
     }
   };
 
-  // Delete a note
+  // Delete note
   const deleteNote = async (id) => {
-    const response = await fetch(`/api/notes/${id}`, { method: "DELETE" });
-    if (response.ok) {
-      setNotes(notes.filter((note) => note.id !== id));
+    try {
+      const response = await fetch(`/api/notes/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        setNotes(notes.filter((note) => note._id !== id));
+      } else {
+        console.error("Failed to delete note");
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
     }
   };
 
-  // Open the edit dialog
+  // Open edit dialog
   const openEditDialog = (note) => {
     setEditingNote(note);
     setTitle(note.title);
-    setContent(note.content);
+    setContent(note.description);
     setOpenDialog(true);
   };
 
-  // Close the dialog
+  // Close dialog
   const closeDialog = () => {
     setEditingNote(null);
     setTitle("");
@@ -74,18 +94,30 @@ export default function Home() {
     setOpenDialog(false);
   };
 
-  // Update the note
+  // Update note
   const updateNote = async () => {
-    const updatedNote = { title, content };
-    const response = await fetch(`/api/notes/${editingNote.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedNote),
-    });
+    if (!editingNote || !editingNote._id) {
+      console.error("No note ID for updating.");
+      return;
+    }
 
-    if (response.ok) {
-      fetchNotes();
-      closeDialog();
+    const updatedNote = { title, description: content, userId, tagId };
+
+    try {
+      const response = await fetch(`/api/notes/${editingNote._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedNote),
+      });
+
+      if (response.ok) {
+        fetchNotes();
+        closeDialog();
+      } else {
+        console.error("Failed to update note");
+      }
+    } catch (error) {
+      console.error("Error updating note:", error);
     }
   };
 
@@ -114,29 +146,43 @@ export default function Home() {
           onChange={(e) => setContent(e.target.value)}
           style={{ marginBottom: "20px" }}
         />
-        <Button variant="contained" color="primary" onClick={addNote} style={{ width: "100%" }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={addNote} 
+          style={{ width: "100%" }}
+          aria-label="Add Note"
+        >
           Add Note
         </Button>
       </Box>
 
       <List>
-        {Array.isArray(notes) && notes.length > 0 ? (
+        {notes.length > 0 ? (
           notes.map((note) => (
-            <ListItem key={note.id} secondaryAction={
+            <ListItem key={note._id} secondaryAction={
               <>
-                <IconButton edge="end" aria-label="edit" onClick={() => openEditDialog(note)}>
+                <IconButton 
+                  edge="end" 
+                  aria-label="edit" 
+                  onClick={() => openEditDialog(note)}
+                >
                   <EditIcon />
                 </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => deleteNote(note.id)}>
+                <IconButton 
+                  edge="end" 
+                  aria-label="delete" 
+                  onClick={() => deleteNote(note._id)}
+                >
                   <DeleteIcon />
                 </IconButton>
               </>
             }>
-              <ListItemText primary={note.title} secondary={note.content} />
+              <ListItemText primary={note.title} secondary={note.description} />
             </ListItem>
           ))
         ) : (
-          <Typography>No notes available</Typography> // Handle empty notes
+          <Typography>No notes available</Typography>
         )}
       </List>
 
