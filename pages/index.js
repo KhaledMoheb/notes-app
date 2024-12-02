@@ -177,7 +177,7 @@ export default function Home() {
                 <IconButton 
                   edge="end" 
                   aria-label="delete" 
-                  onClick={() => deleteNote(note._id)}
+                  onClick={() => deleteNote(note.id)}
                 >
                   <DeleteIcon />
                 </IconButton>
