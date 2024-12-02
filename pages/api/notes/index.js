@@ -149,7 +149,7 @@ export default async function handler(req, res) {
           userId: null,
           pinned: false,
           deleted: true,
-          updatedAt: new Date(), // Keep a timestamp for when the deletion occurred
+          timestamp: new Date(), // Keep a timestamp for when the deletion occurred
         },
         { new: true } // Return the updated document
       );
