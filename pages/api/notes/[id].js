@@ -89,12 +89,8 @@ export default async function handler(req, res) {
                 return res.status(404).json({ error: "Note not found" });
             }
 
-            // Option 1: Hard delete
-            // await Note.findByIdAndDelete(id);
-
-            // Option 2: Soft delete (recommended)
-            note.deleted = true;
-            await note.save();
+            // Hard delete: completely remove the note from the database
+            await Note.findByIdAndDelete(id);
 
             return res.status(200).json({ message: "Note deleted successfully" });
         }
