@@ -12,11 +12,10 @@ export default async function handler(req, res) {
       // Build dynamic query using EdgeQL
       const query = e.select(e.Note, {
         filter: e.and(
-          ...Object.entries(queryParams).map(([key, value]) => {
-            if (value) {
-              return e.op(e.Note[key], 'ilike', `%${value}%`);
-            }
-          })
+          // Only include filters where value is truthy (not null, undefined, or an empty string)
+          ...Object.entries(queryParams)
+            .filter(([key, value]) => value)  // Filter out falsy values
+            .map(([key, value]) => e.op(e.Note[key], "ilike", `%${value}%`))
         ),
         id: true,
         userId: true,
