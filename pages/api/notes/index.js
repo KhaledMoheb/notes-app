@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
       // Build dynamic filters based on query parameters
       const filters = Object.entries(queryParams)
-        .filter(([key, value]) => value && ['title', 'description', 'userId', 'tagId', 'deleted', 'pinned'].includes(key)) // Only valid fields from the schema
+        .filter(([key, value]) => value && ["title", "description", "userId", "tagId", "deleted", "pinned"].includes(key)) // Only valid fields from the schema
         .map(([key, value]) => `note.${key} ILIKE '%${value}%'`);
 
       // Construct the EdgeQL query with filters
