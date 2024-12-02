@@ -5,7 +5,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 
 export default function Home() {
-  const [notes, setNotes] = useState([]);
+  const [notes, setNotes] = useState([]); // Initialize as an empty array
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNote, setEditingNote] = useState(null);
@@ -13,10 +13,24 @@ export default function Home() {
 
   // Fetch all notes on initial load
   useEffect(() => {
-    fetch("/api/notes")
-      .then((res) => res.json())
-      .then((data) => setNotes(data));
+    fetchNotes();
   }, []);
+
+  // Fetch notes from the API
+  const fetchNotes = async () => {
+    try {
+      const response = await fetch("/api/notes");
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        setNotes(data); // Ensure it's an array before setting the state
+      } else {
+        console.error("Fetched data is not an array:", data); // Handle non-array response
+      }
+    } catch (error) {
+      console.error("Error fetching notes:", error); // Catch any errors during fetch
+    }
+  };
 
   // Add a new note
   const addNote = async () => {
@@ -34,13 +48,6 @@ export default function Home() {
       setContent("");
       fetchNotes();
     }
-  };
-
-  // Fetch notes again after adding or deleting
-  const fetchNotes = () => {
-    fetch("/api/notes")
-      .then((res) => res.json())
-      .then((data) => setNotes(data));
   };
 
   // Delete a note
@@ -113,20 +120,24 @@ export default function Home() {
       </Box>
 
       <List>
-        {notes.map((note) => (
-          <ListItem key={note.id} secondaryAction={
-            <>
-              <IconButton edge="end" aria-label="edit" onClick={() => openEditDialog(note)}>
-                <EditIcon />
-              </IconButton>
-              <IconButton edge="end" aria-label="delete" onClick={() => deleteNote(note.id)}>
-                <DeleteIcon />
-              </IconButton>
-            </>
-          }>
-            <ListItemText primary={note.title} secondary={note.content} />
-          </ListItem>
-        ))}
+        {Array.isArray(notes) && notes.length > 0 ? (
+          notes.map((note) => (
+            <ListItem key={note.id} secondaryAction={
+              <>
+                <IconButton edge="end" aria-label="edit" onClick={() => openEditDialog(note)}>
+                  <EditIcon />
+                </IconButton>
+                <IconButton edge="end" aria-label="delete" onClick={() => deleteNote(note.id)}>
+                  <DeleteIcon />
+                </IconButton>
+              </>
+            }>
+              <ListItemText primary={note.title} secondary={note.content} />
+            </ListItem>
+          ))
+        ) : (
+          <Typography>No notes available</Typography> // Handle empty notes
+        )}
       </List>
 
       {/* Edit Dialog */}
