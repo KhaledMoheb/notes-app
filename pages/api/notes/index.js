@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 // MongoDB connection setup
-const clientOptions = { 
-  serverApi: { version: "1", strict: true, deprecationErrors: true }
+const clientOptions = {
+  serverApi: { version: "1", strict: true, deprecationErrors: true },
 };
 
 const connectMongoDB = async () => {
@@ -11,7 +11,7 @@ const connectMongoDB = async () => {
       console.log("MongoDB is already connected.");
       return; // Already connected
     }
-    
+
     console.log("Connecting to MongoDB...");
     await mongoose.connect("mongodb+srv://kmo7eb:mQAe3mpfA50wHy4U@cluster0.x57sh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", clientOptions);
     console.log("MongoDB connected successfully.");
@@ -54,11 +54,23 @@ export default async function handler(req, res) {
 
       console.log("Query filters:", filters);
 
-      // Query MongoDB with filters
-      const notes = await Note.find(filters);
+      // Query MongoDB with filters and use lean() to return plain JavaScript objects
+      const notes = await Note.find(filters).lean();
 
-      console.log("Fetched notes:", notes.length);
-      return res.status(200).json(notes);
+      // Map the notes to rename _id to id
+      const notesWithId = notes.map(note => ({
+        id: note._id.toString(), // Convert ObjectId to string
+        title: note.title,
+        description: note.description,
+        userId: note.userId,
+        tagId: note.tagId,
+        deleted: note.deleted,
+        pinned: note.pinned,
+        timestamp: note.timestamp,
+      }));
+
+      console.log("Fetched notes:", notesWithId.length);
+      return res.status(200).json(notesWithId);
     } else if (req.method === "POST") {
       // Add a new note to the database
       const newNote = req.body;
@@ -81,44 +93,21 @@ export default async function handler(req, res) {
 
       const result = await note.save();
       console.log("Note added:", result);
-      return res.status(201).json({ message: "Note added successfully!", note: result });
-    } else if (req.method === "PUT") {
-      // Update an existing note
-      const { id } = req.query;
-      const updatedNote = req.body;
 
-      console.log("Updating note with ID:", id);
-
-      if (!id) {
-        console.log("Error: Note ID is required for update");
-        return res.status(400).json({ error: "Note ID is required" });
-      }
-
-      const existingNote = await Note.findById(id);
-
-      if (!existingNote) {
-        console.log("Error: Note not found for update");
-        return res.status(404).json({ error: "Note not found" });
-      }
-
-      // Update fields based on what was passed
-      const updated = await Note.findByIdAndUpdate(
-        id,
-        {
-          $set: {
-            title: updatedNote.title ?? existingNote.title,
-            description: updatedNote.description ?? existingNote.description,
-            userId: updatedNote.userId ?? existingNote.userId,
-            tagId: updatedNote.tagId ?? existingNote.tagId,
-            deleted: updatedNote.deleted ?? existingNote.deleted,
-            pinned: updatedNote.pinned ?? existingNote.pinned,
-          },
+      // Return the note with the id field instead of _id
+      return res.status(201).json({
+        message: "Note added successfully!",
+        note: {
+          id: result._id.toString(), // Convert ObjectId to string
+          title: result.title,
+          description: result.description,
+          userId: result.userId,
+          tagId: result.tagId,
+          deleted: result.deleted,
+          pinned: result.pinned,
+          timestamp: result.timestamp,
         },
-        { new: true } // Return the updated document
-      );
-
-      console.log("Note updated:", updated);
-      return res.status(200).json({ message: "Note updated successfully!", note: updated });
+      });
     } else if (req.method === "DELETE") {
       // Delete a note from the database
       const { id } = req.query;

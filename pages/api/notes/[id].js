@@ -66,11 +66,11 @@ export default async function handler(req, res) {
         await connectMongoDB();
 
         if (req.method === "PUT") {
-            const { userId, title, description } = req.body;
+            const { userId, title, description, tagId, pinned } = req.body;
 
             const updatedNote = await Note.findByIdAndUpdate(
                 id,
-                { title, description, updatedAt: new Date() },
+                { title, description, tagId, pinned, updatedAt: new Date() },
                 { new: true }
             );
 
