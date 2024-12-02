@@ -94,9 +94,6 @@ export default async function handler(req, res) {
                 {
                     title: "",
                     description: "",
-                    tagId: null,
-                    userId: null,
-                    pinned: false,
                     deleted: true,
                     timestamp: new Date(), // Keep a timestamp for when the deletion occurred
                 },
