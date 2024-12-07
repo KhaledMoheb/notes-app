@@ -79,6 +79,7 @@ export default async function handler(req, res) {
         // Map the notes to rename _id to id
         const notesWithId = notes.map(note => ({
           id: note._id.toString(), // Convert ObjectId to string
+          serverId: note._id.toString(), // Convert ObjectId to string
           localId: note.localId,
           userId: note.userId,
           title: note.title,
@@ -124,6 +125,7 @@ export default async function handler(req, res) {
         message: "Note added successfully!",
         note: {
           id: result._id.toString(), // Convert ObjectId to string
+          serverId: result._id.toString(), // Convert ObjectId to string
           localId: result.localId,
           userId: result.userId,
           title: result.title,
