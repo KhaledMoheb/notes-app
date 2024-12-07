@@ -37,47 +37,69 @@ const noteSchema = new mongoose.Schema({
 
 const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 
+// Helper function to validate ObjectId
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
 export default async function handler(req, res) {
+    console.log("Handler invoked. Request method:", req.method);
+
     if (req.method !== "POST") {
+        console.log("Invalid method:", req.method);
         return res.status(405).json({ error: "Method not allowed" });
     }
 
     try {
+        console.log("Connecting to MongoDB...");
         await connectMongoDB();
 
         const { notes } = req.body; // Expect an array of notes
+        console.log("Received request body:", JSON.stringify(req.body, null, 2));
+
         if (!Array.isArray(notes)) {
+            console.error("Invalid request format. Expected an array of notes.");
             return res.status(400).json({ error: "Invalid request format. Expected an array of notes." });
         }
 
         const processedNotes = [];
+        console.log(`Processing ${notes.length} notes...`);
 
         for (const noteData of notes) {
             const { id, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
 
+            console.log("Processing note:", JSON.stringify(noteData, null, 2));
+
             let processedNote;
 
             if (id) {
-                // Find the existing note by ID
-                const existingNote = await Note.findById(id);
+                if (isValidObjectId(id)) {
+                    console.log(`ID ${id} is a valid ObjectId. Checking for existing note...`);
+                    const existingNote = await Note.findById(id);
 
-                if (existingNote) {
-                    // Only update if the incoming timestamp is greater
-                    if (new Date(timestamp) > new Date(existingNote.timestamp)) {
-                        processedNote = await Note.findByIdAndUpdate(
-                            id,
-                            { title, description, tagId, deleted, pinned, timestamp: new Date(timestamp) },
-                            { new: true }
-                        );
+                    if (existingNote) {
+                        console.log(`Found existing note with ID ${id}:`, JSON.stringify(existingNote, null, 2));
+
+                        if (new Date(timestamp) > new Date(existingNote.timestamp)) {
+                            console.log("Incoming timestamp is newer. Updating note...");
+                            processedNote = await Note.findByIdAndUpdate(
+                                id,
+                                { title, description, tagId, deleted, pinned, timestamp: new Date(timestamp) },
+                                { new: true }
+                            );
+                            console.log("Note updated:", JSON.stringify(processedNote, null, 2));
+                        } else {
+                            console.log("Existing note has a newer timestamp. Skipping update.");
+                            processedNote = existingNote;
+                        }
                     } else {
-                        // Skip update if existing timestamp is newer
-                        processedNote = existingNote;
+                        console.log(`No note found with ID ${id}. Creating a new note...`);
                     }
+                } else {
+                    console.warn(`ID ${id} is not a valid ObjectId. Creating a new note instead.`);
                 }
             }
 
             if (!processedNote) {
-                // Create a new note if no valid ID or update condition not met
+                console.log("Creating a new note...");
                 const newNote = new Note({
                     title: title || "",
                     description: description || "",
@@ -89,9 +111,9 @@ export default async function handler(req, res) {
                 });
 
                 processedNote = await newNote.save();
+                console.log("New note created:", JSON.stringify(processedNote, null, 2));
             }
 
-            // Push the processed note with id formatted
             processedNotes.push({
                 id: processedNote._id.toString(),
                 title: processedNote.title,
@@ -104,6 +126,7 @@ export default async function handler(req, res) {
             });
         }
 
+        console.log("All notes processed successfully.");
         return res.status(200).json({ message: "Sync completed successfully!", notes: processedNotes });
     } catch (error) {
         console.error("Error handling sync:", error);
