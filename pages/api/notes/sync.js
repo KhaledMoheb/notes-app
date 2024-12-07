@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { firestore, messaging } from "../../../lib/firebaseAdmin";
 
 // MongoDB connection setup
 const clientOptions = {
