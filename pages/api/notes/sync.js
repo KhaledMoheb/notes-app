@@ -160,8 +160,8 @@ export default async function handler(req, res) {
             });
         }
 
-        usersIds.forEach(async (userId) => {
-            await sendPushNotification(userId, "Notes Synced", `You synced ${notes.length} notes`);
+        usersIds.forEach((userId) => {
+            sendPushNotification(userId, "Notes Synced", `You synced ${notes.length} notes`);
         });
 
         console.log("All notes processed successfully.");
