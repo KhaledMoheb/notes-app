@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
             const updatedNote = await Note.findByIdAndUpdate(
                 id,
-                { localId, title, description, tagId, pinned, updatedAt: new Date() },
+                { localId, title, description, tagId, pinned, timestamp: new Date() },
                 { new: true }
             );
 
