@@ -40,6 +40,34 @@ const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 // Helper function to validate ObjectId
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+
+const sendPushNotification = async (userId, title, message) => {
+    try {
+        console.log("sendPushNotification", userId);
+        const devicesSnapshot = await firestore.collection(`users/${userId}/devices`).get();
+        const deviceTokens = devicesSnapshot.docs.map((doc) => doc.data().deviceId);
+        console.log("devicesSnapshot", devicesSnapshot);
+
+        if (deviceTokens.length === 0) {
+            console.log("No device tokens found for user.");
+            return;
+        }
+
+        const messagePayload = {
+            notification: {
+                title,
+                body: message,
+            },
+            tokens: deviceTokens,
+        };
+
+        await messaging.sendEachForMulticast(messagePayload);
+        console.log("Push notification sent!");
+    } catch (error) {
+        console.error("Error sending push notification:", error);
+    }
+};
+
 export default async function handler(req, res) {
     console.log("Handler invoked. Request method:", req.method);
 
@@ -63,8 +91,13 @@ export default async function handler(req, res) {
         const processedNotes = [];
         console.log(`Processing ${notes.length} notes...`);
 
+        const userIds = new Set();
+
         for (const noteData of notes) {
             const { id, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
+            if (!usersIds.has(userId)) {
+                usersIds.add(userId);
+            }
 
             console.log("Processing note:", JSON.stringify(noteData, null, 2));
 
@@ -125,6 +158,10 @@ export default async function handler(req, res) {
                 timestamp: processedNote.timestamp,
             });
         }
+
+        usersIds.forEach(async (userId) => {
+            await sendPushNotification(userId, "Notes Synced", `You synced ${notes.length} notes`);
+        });
 
         console.log("All notes processed successfully.");
         return res.status(200).json({ message: "Sync completed successfully!", notes: processedNotes });
