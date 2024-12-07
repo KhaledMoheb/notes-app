@@ -160,9 +160,17 @@ export default async function handler(req, res) {
             });
         }
 
-        usersIds.forEach((userId) => {
-            sendPushNotification(userId, "Notes Synced", `You synced ${notes.length} notes`);
+        console.log("Processing notifications for users:", Array.from(usersIds));
+
+        const notificationPromises = Array.from(usersIds).map(async (userId) => {
+            try {
+                await sendPushNotification(userId, "Notes Synced", `You synced ${notes.length} notes`);
+            } catch (error) {
+                console.error(`Failed to send notification to user ${userId}:`, error);
+            }
         });
+
+        await Promise.all(notificationPromises);
 
         console.log("All notes processed successfully.");
         return res.status(200).json({ message: "Sync completed successfully!", notes: processedNotes });
