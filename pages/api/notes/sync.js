@@ -27,9 +27,10 @@ const connectMongoDB = async () => {
 
 // Define Note model
 const noteSchema = new mongoose.Schema({
+    localId: { type: String, required: true },
+    userId: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    userId: { type: String, required: true },
     tagId: { type: Number, required: true },
     deleted: { type: Boolean, default: false },
     pinned: { type: Boolean, default: false },
@@ -40,7 +41,6 @@ const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 
 // Helper function to validate ObjectId
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-
 
 const sendPushNotification = async (userId, title, message) => {
     try {
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         const usersIds = new Set();
 
         for (const noteData of notes) {
-            const { id, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
+            const { id, localId, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
             if (!usersIds.has(userId)) {
                 usersIds.add(userId);
             }
@@ -135,6 +135,7 @@ export default async function handler(req, res) {
             if (!processedNote) {
                 console.log("Creating a new note...");
                 const newNote = new Note({
+                    localId: localId || "",
                     title: title || "",
                     description: description || "",
                     userId,
@@ -150,6 +151,7 @@ export default async function handler(req, res) {
 
             processedNotes.push({
                 id: processedNote._id.toString(),
+                localId: processedNote.localId,
                 title: processedNote.title,
                 description: processedNote.description,
                 userId: processedNote.userId,

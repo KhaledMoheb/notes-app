@@ -23,6 +23,7 @@ const connectMongoDB = async () => {
 
 // Define Note model
 const noteSchema = new mongoose.Schema({
+  localId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   userId: { type: String, required: true },
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
 
       // Ensure userId is provided
       if (queryParams.userId) {
-       // return res.status(400).json({ error: "userId is required" });
+        // return res.status(400).json({ error: "userId is required" });
         // Add userId filter
         filters.userId = queryParams.userId;
       }
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
       }
 
       // Add additional filters (optional)
+      if (queryParams.localId) filters.localId = { $regex: queryParams.localId, $options: "i" }; // Case-insensitive regex
       if (queryParams.title) filters.title = { $regex: queryParams.title, $options: "i" }; // Case-insensitive regex
       if (queryParams.description) filters.description = { $regex: queryParams.description, $options: "i" };
       if (queryParams.tagId) filters.tagId = queryParams.tagId;
@@ -77,9 +79,10 @@ export default async function handler(req, res) {
         // Map the notes to rename _id to id
         const notesWithId = notes.map(note => ({
           id: note._id.toString(), // Convert ObjectId to string
+          localId: note.localId,
+          userId: note.userId,
           title: note.title,
           description: note.description,
-          userId: note.userId,
           tagId: note.tagId,
           deleted: note.deleted,
           pinned: note.pinned,
@@ -98,15 +101,16 @@ export default async function handler(req, res) {
 
       console.log("Creating new note:", newNote);
 
-      if (!newNote.title || !newNote.description || !newNote.userId || !newNote.tagId) {
+      if (!newNote.title || !newNote.description || !newNote.userId || !newNote.localId || !newNote.tagId) {
         console.log("Error: Missing required fields in the request");
         return res.status(400).json({ error: "Missing required fields" });
       }
 
       const note = new Note({
+        localId: newNote.localId,
+        userId: newNote.userId,
         title: newNote.title,
         description: newNote.description,
-        userId: newNote.userId,
         tagId: newNote.tagId,
         deleted: newNote.deleted || false,
         pinned: newNote.pinned || false,
@@ -120,9 +124,10 @@ export default async function handler(req, res) {
         message: "Note added successfully!",
         note: {
           id: result._id.toString(), // Convert ObjectId to string
+          localId: result.localId,
+          userId: result.userId,
           title: result.title,
           description: result.description,
-          userId: result.userId,
           tagId: result.tagId,
           deleted: result.deleted,
           pinned: result.pinned,

@@ -22,6 +22,7 @@ const connectMongoDB = async () => {
 
 // Define Note model
 const noteSchema = new mongoose.Schema({
+    localId: { type: String, required: true }, // Unique identifier from the device
     title: { type: String, required: true },
     description: { type: String, required: true },
     userId: { type: String, required: true },
@@ -66,11 +67,11 @@ export default async function handler(req, res) {
         await connectMongoDB();
 
         if (req.method === "PUT") {
-            const { userId, title, description, tagId, pinned } = req.body;
+            const { userId, localId, title, description, tagId, pinned } = req.body;
 
             const updatedNote = await Note.findByIdAndUpdate(
                 id,
-                { title, description, tagId, pinned, updatedAt: new Date() },
+                { localId, title, description, tagId, pinned, updatedAt: new Date() },
                 { new: true }
             );
 
@@ -95,12 +96,12 @@ export default async function handler(req, res) {
                     title: "",
                     description: "",
                     deleted: true,
-                    timestamp: new Date(), // Keep a timestamp for when the deletion occurred
+                    timestamp: new Date(),
                 },
-                { new: true } // Return the updated document
+                { new: true }
             );
 
-            await sendPushNotification(userId, "Note Deleted", "A note has been deleted.");
+            await sendPushNotification(note.userId, "Note Deleted", "A note has been deleted.");
             return res.status(200).json({ message: "Note deleted successfully" });
         }
 
