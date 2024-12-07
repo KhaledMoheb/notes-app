@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         const processedNotes = [];
         console.log(`Processing ${notes.length} notes...`);
 
-        const userIds = new Set();
+        const usersIds = new Set();
 
         for (const noteData of notes) {
             const { id, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
