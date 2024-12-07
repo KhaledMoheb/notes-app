@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         const usersIds = new Set();
 
         for (const noteData of notes) {
-            const { id, localId, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
+            const { serverId, localId, title, description, userId, tagId, deleted, pinned, timestamp } = noteData;
             if (!usersIds.has(userId)) {
                 usersIds.add(userId);
             }
@@ -104,18 +104,18 @@ export default async function handler(req, res) {
 
             let processedNote;
 
-            if (id) {
-                if (isValidObjectId(id)) {
-                    console.log(`ID ${id} is a valid ObjectId. Checking for existing note...`);
-                    const existingNote = await Note.findById(id);
+            if (serverId) {
+                if (isValidObjectId(serverId)) {
+                    console.log(`serverId ${serverId} is a valid ObjectId. Checking for existing note...`);
+                    const existingNote = await Note.findById(serverId);
 
                     if (existingNote) {
-                        console.log(`Found existing note with ID ${id}:`, JSON.stringify(existingNote, null, 2));
+                        console.log(`Found existing note with serverId ${serverId}:`, JSON.stringify(existingNote, null, 2));
 
                         if (new Date(timestamp) > new Date(existingNote.timestamp)) {
                             console.log("Incoming timestamp is newer. Updating note...");
                             processedNote = await Note.findByIdAndUpdate(
-                                id,
+                                serverId,
                                 { title, description, tagId, deleted, pinned, timestamp: new Date(timestamp) },
                                 { new: true }
                             );
@@ -125,10 +125,10 @@ export default async function handler(req, res) {
                             processedNote = existingNote;
                         }
                     } else {
-                        console.log(`No note found with ID ${id}. Creating a new note...`);
+                        console.log(`No note found with serverId ${serverId}. Creating a new note...`);
                     }
                 } else {
-                    console.warn(`ID ${id} is not a valid ObjectId. Creating a new note instead.`);
+                    console.warn(`serverId ${serverId} is not a valid ObjectId. Creating a new note instead.`);
                 }
             }
 
@@ -151,6 +151,7 @@ export default async function handler(req, res) {
 
             processedNotes.push({
                 id: processedNote._id.toString(),
+                serverId: processedNote._id.toString(),
                 localId: processedNote.localId,
                 title: processedNote.title,
                 description: processedNote.description,
